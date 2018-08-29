@@ -167,8 +167,15 @@
 (define window (sdl-create-window "test" 50 50 800 600 (sdl-window-flags 'shown)))
 
 (define renderer (sdl-create-renderer window -1 (sdl-renderer-flags 'accelerated)))
-(define bmp-surface (sdl-load-bmp "ship.bmp"))
-(define img-texture (sdl-create-texture-from-surface renderer bmp-surface))
+
+(load "world.ss")
+(load "av-interface.ss")
+
+(define w (new-world renderer))
+
+
+;(define bmp-surface (sdl-load-bmp "ship.bmp"))
+;(define img-texture (sdl-create-texture-from-surface renderer bmp-surface))
 
 (define src-rect
   (gen-rect 64 64))
@@ -185,9 +192,9 @@
 ;; perhaps the draw procedure is kept
 ;; as a property of the "sprite" in
 ;; a closure
-(register-draw-procedure
-  (lambda ()
-    (sdl-render-copy renderer img-texture src-rect dest-rect)))
+;(register-draw-procedure
+  ;(lambda ()
+    ;(sdl-render-copy renderer img-texture src-rect dest-rect)))
 
 (register-event-handler
   (generate-keydown-handler
@@ -217,16 +224,16 @@
 
 (let mortality-loop ()
  (sdl-poll-event event)
- (pass-event-to-event-handlers event)
+ ;(pass-event-to-event-handlers event)
  (clear-renderer)
- (call-draw-procedures)
+ ;(call-draw-procedures)
  (sdl-render-present renderer)
 
  (if (not (*quit*))
      (mortality-loop)))
 
 (sdl-destroy-window window)
-(sdl-destroy-texture img-texture)
+;(sdl-destroy-texture img-texture)
 (sdl-destroy-renderer renderer)
 (sdl-quit)
 
