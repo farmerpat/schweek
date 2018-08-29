@@ -19,7 +19,9 @@
     (object ([renderer window-renderer])
       [(av-interface? self) #t]
       [(draw self thing)
-       (cond ((shape? thing)
+       (cond ((colored-point? thing)
+              [$ draw-pixel self thing [$ color thing]])
+             ((shape? thing)
               (cond ((circle? thing) [$ draw-circle self thing])
                     ((rectangle? thing) [$ draw-rectangle self thing])
                     (else (error "av-interface:draw" "unrecognized shape" thing))))
@@ -32,21 +34,10 @@
        (let-values (((r g b a) [$ rgba color]))
          (sdl-set-render-draw-color [$ renderer self] r g b a)
          (sdl-render-draw-point [$ renderer self] [$ x point] [$ y point]))]
-      [(draw-circle self circle)
-       ()
-       ]
-      [(draw-globs self world)
+      [(draw-rectangle self rect) '()]
+      [(draw-circle self circle) '()]
+      [(draw-globs self globs)
        (map
          (lambda (glob)
            [$ draw self glob])
-         [$ *globs* world])
-       
-       ;;(render self world)
-       ;; maybe we go through world's *globs* and render them?
-       ;; actually. i think we just keep a renderer that is of
-       ;; a known size (full size of window-renderer (we'll only
-       ;; support full-size worlds to start (for simplicity)))
-       ;; and all the drawing is done to that.
-       ;; this method then becomes a call to sdl-copy-renderer or whatever...
-
-       ])))
+         globs)])))

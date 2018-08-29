@@ -5,25 +5,10 @@
 ;; i sort of see each world as a collection of widgets/objects
 ;; and a scheme environment. maybe there is some way to
 ;; monkey with all that w/o hacking the scheme...
-
-;; we have (at least)...
-;environment
-;copy-environment
-;environment
-;environment-mutable?
-;environment-symbols
-;environment?
-;ieee-environment
-;interaction-environment
-;null-environment
-;scheme-environment
-;scheme-report-environment
-; im not sure that we can do
-; this with environments. maybe
-; *globs* will be enough.
+;; it seems like there isn't...
 
 ;; can't we load this conditionally?
-(load "tiny-talk.sls")
+;(load "tiny-talk.sls")
 
 (import (chezscheme)
         (sdl2)
@@ -41,7 +26,7 @@
          [$ *globs* self (cons glob [$ *globs* self])])]
       ;; is it bad practice to have a method render
       ;; that just calls render on its component?
-      [(render self) [$ draw-globs [$ av-interface self] self]]
+      [(render self) [$ draw-globs [$ av-interface self] [$ *globs* self]]]
       [(=? self other)
        (unless (world? other)
          (error 'world:=?
@@ -54,23 +39,34 @@
 ;; also lines....
 (define *known-shape-types* (make-parameter '(circle rectangle)))
 
-(define make-point
+(define new-point
   (let ([proto-point
           (object ()
             [(point? self) #t])])
     (lambda (x y)
       (when (not (and (number? x) (number? y)))
-        (error "make-point" "invalid argument(s)" x y))
+        (error "new-point" "invalid argument(s)" x y))
       (object ([x x] [y y])
         [(delegate self) proto-point]))))
 
 (define-predicate point?)
 
-(define make-shape
+(define new-colored-point
+  (lambda (x y color)
+    (when (not (color? color))
+      (error "new-colored-point" "invalid color" color))
+    (let ((proto-point (new-point x y)))
+      (object ([color color])
+        [(colored-point? self) #t]
+        [(delegate self) proto-point]))))
+
+(define-predicate colored-point?)
+
+(define new-shape
   (let ([proto-shape
           (object ()
             [(shape? self) #t]
-            [(draw self) (lambda (renderer) '())]
+            ;[(draw self) (lambda (renderer) '())]
             ;; figure out how to make this something we "override"
             [(area self) -1])])
     (lambda (type)
@@ -81,12 +77,12 @@
 
 (define-predicate shape?)
 
-(define make-circle
-  (let ([proto-shape (make-shape 'circle)]
+(define new-circle
+  (let ([proto-shape (new-shape 'circle)]
         [*pi* 3.141592654])
     (lambda (pt r)
       (when (not (and (point? pt) (number? r)))
-        (error "make-circle" "invalid argument(s)" pt r))
+        (error "new-circle" "invalid argument(s)" pt r))
       (object ([point pt] [radius r])
         ;; "override" (e.g. shadow?) area in proto-shape
         [(circle? self) #t]
@@ -96,8 +92,8 @@
 
 (define-predicate circle?)
 
-(define make-rectangle
-  (let ([proto-shape (make-shape 'rectangle)])
+(define new-rectangle
+  (let ([proto-shape (new-shape 'rectangle)])
     (lambda (top-left-point w h)
       (object ([origin top-left-point] [width w] [height h])
         [(rectangle? self) #t]
@@ -110,7 +106,7 @@
 (define-predicate rectangle?)
 
 ;; e.g.
-;(define c (make-circle (make-point 350 50) 33.1))
+;(define c (new-circle (new-point 350 50) 33.1))
 ; dynamically add a method to point instances
 ;[$ add-method! [$ delegate [$ point c]] 'say-point (lambda (self) (display "i r pt")(newline))]
 

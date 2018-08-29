@@ -1,10 +1,10 @@
 (load "tiny-talk.sls")
+(load "world.ss")
+(load "color.ss")
 
 (import (chezscheme)
         (sdl2)
         (tiny-talk))
-
-(load "world.ss")
 
 (define *quit* (make-parameter #f))
 
@@ -172,7 +172,12 @@
 (load "av-interface.ss")
 
 (define w (new-world renderer))
+(define color-black [$ get-color *c64-palette* 'black])
 
+;; make some points and add them to the world
+(do ((i 10  (+ i 10)))
+  ((> i 200) ' ())
+  [$ add-glob! w (new-colored-point i i color-black)])
 
 ;(define bmp-surface (sdl-load-bmp "ship.bmp"))
 ;(define img-texture (sdl-create-texture-from-surface renderer bmp-surface))
@@ -201,7 +206,6 @@
     (generate-kbd-code-predicate 'escape)
     (lambda () (*quit* #t))))
 
-
 (register-event-handler
   (lambda (event)
     (when (is-mouse-buttom-down-event? event)
@@ -224,9 +228,10 @@
 
 (let mortality-loop ()
  (sdl-poll-event event)
- ;(pass-event-to-event-handlers event)
+ (pass-event-to-event-handlers event)
  (clear-renderer)
- ;(call-draw-procedures)
+ ;; draw globs
+ [$ render w]
  (sdl-render-present renderer)
 
  (if (not (*quit*))
