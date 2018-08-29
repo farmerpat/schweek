@@ -1,3 +1,18 @@
+;; NOTE:
+;;   adding image magick bindings
+;;   would be super cool. could have
+;;   image objects that allow IM
+;;   transformations/conversion to be performed on them
+
+;; in addition to av-interface, maybe we also have
+;; an event-interface. It would be really nice
+;; to be able to add event listeners like
+;; 'mouse-single-click and 'mouse-double-click
+;; instead of the client of the event registrar
+;; having to deal with mouse down events firing on
+;; a million frames. of course, we will also add
+;; events for 'mouse-down, etc for more fine-grained
+;; control.
 (load "tiny-talk.sls")
 (load "world.ss")
 (load "color.ss")
@@ -175,10 +190,13 @@
 (define color-black [$ get-color *c64-palette* 'black])
 
 ;; make some points and add them to the world
-(do ((i 10  (+ i 10)))
-  ((> i 200) ' ())
+(do ((i 0  (+ i 1)))
+  ((> i 400) ' ())
   [$ add-glob! w (new-colored-point i i color-black)])
 
+[$ add-glob! w (new-colored-line (new-point 0 200) (new-point 400 200) color-black)]
+
+[$ add-glob! w (new-colored-rectangle (new-point 300 400) 50 50 color-black)]
 ;(define bmp-surface (sdl-load-bmp "ship.bmp"))
 ;(define img-texture (sdl-create-texture-from-surface renderer bmp-surface))
 

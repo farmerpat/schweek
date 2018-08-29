@@ -1,3 +1,11 @@
+;; NOTE:
+;; on approach would be to require the definition
+;; of a set of primitives, and to compose more
+;; complicated shapes from them. with point and line,
+;; everything else could be created (though less efficiently,
+;; i'd think) without specific sdl calls (aside from those
+;; required by pt and line).
+
 ;; if we hack add-method! etc, it may become possible to save
 ;; world state via serialization. we would have to save
 ;; the added lambdas making up the added serializable methods.
@@ -62,6 +70,24 @@
 
 (define-predicate colored-point?)
 
+(define new-line
+  (lambda (p1 p2)
+    (when (not (and (point? p1) (point? p2)))
+      (error "new-line" "invalid point(s)" p1 p2))
+    (object ([start-point p1] [end-point p2])
+      [(line? self) #t])))
+
+(define-predicate line?)
+
+(define new-colored-line
+  (lambda (p1 p2 color)
+    (let ((proto-line (new-line p1 p2)))
+      (object ([color color])
+        [(colored-line? self) #t]
+        [(delegate self) proto-line]))))
+
+(define-predicate colored-line?)
+
 (define new-shape
   (let ([proto-shape
           (object ()
@@ -104,6 +130,15 @@
         [(delegate self) proto-shape]))))
 
 (define-predicate rectangle?)
+
+(define new-colored-rectangle
+  (lambda (origin w h color)
+    (let ([proto-rect (new-rectangle origin w h)])
+      (object ([color color])
+        [(colored-rectangle? self) #t]
+        [(delegate self) proto-rect]))))
+
+(define-predicate colored-rectangle?)
 
 ;; e.g.
 ;(define c (new-circle (new-point 350 50) 33.1))
