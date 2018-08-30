@@ -16,6 +16,7 @@
 (load "tiny-talk.sls")
 (load "world.ss")
 (load "color.ss")
+(load "av-interface.ss")
 
 (import (chezscheme)
         (sdl2)
@@ -183,11 +184,9 @@
 
 (define renderer (sdl-create-renderer window -1 (sdl-renderer-flags 'accelerated)))
 
-(load "world.ss")
-(load "av-interface.ss")
-
 (define w (new-world renderer))
 (define color-black [$ get-color *c64-palette* 'black])
+(define color-white [$ get-color *c64-palette* 'white])
 
 ;; make some points and add them to the world
 (do ((i 0  (+ i 1)))
@@ -197,6 +196,11 @@
 [$ add-glob! w (new-colored-line (new-point 0 200) (new-point 400 200) color-black)]
 
 [$ add-glob! w (new-colored-rectangle (new-point 300 400) 50 50 color-black)]
+
+(do ((i 0 (+ i 50)))
+  ((> i 400) '())
+  [$ add-glob! w (new-colored-circle (new-point (+ i 200) 200) 25 color-white)])
+
 ;(define bmp-surface (sdl-load-bmp "ship.bmp"))
 ;(define img-texture (sdl-create-texture-from-surface renderer bmp-surface))
 

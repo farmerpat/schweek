@@ -8,9 +8,25 @@
 ;; there are some things in the "main loop" that are exposed
 ;; sdl calls that would have to be addressed too.
 
+;; probably just put tiny-talk in ~/scheme-libs
+;(load "color.ss")
 (import (chezscheme)
         (sdl2)
         (tiny-talk))
+
+;; put me in a utils file or something...
+;; ...better yet make a my-utils library,
+;; track it, and stick it in ~/scheme-libs
+(define-syntax while
+  (lambda (stx)
+    (syntax-case stx ()
+      [(_ pred sexp1 sexp2 ...)
+       (syntax
+         (let while-loop ()
+           sexp1
+           sexp2
+           ...
+           (if pred (while-loop))))])))
 
 (define new-av-interface
   ;; if we just passed in window,
@@ -20,11 +36,14 @@
       [(av-interface? self) #t]
       [(draw self thing)
        (cond ((colored-point? thing)
-              [$ draw-colored-pixel self thing [$ color thing]])
+              [$ draw-colored-pixel self thing])
              ((colored-line? thing)
               [$ draw-line self thing])
              ((shape? thing)
-              (cond ((circle? thing) [$ draw-circle self thing])
+              (cond ((circle? thing)
+                     (if (colored-circle? thing)
+                       [$ draw-colored-circle self thing]
+                       [$ draw-circle self thing]))
                     ((rectangle? thing)
                      (if (colored-rectangle? thing)
                        [$ draw-colored-rectangle self thing]
@@ -37,8 +56,8 @@
       [(get-mouse-input self) '()]
       [(draw-pixel self point)
        (sdl-render-draw-point [$ renderer self] [$ x point] [$ y point])]
-      [(draw-colored-pixel self point color)
-       (let-values (((r g b a) [$ rgba color]))
+      [(draw-colored-pixel self point)
+       (let-values (((r g b a) [$ rgba [$ color point]]))
          ;; TODO: should be saving and restoring current draw-color
          (sdl-set-render-draw-color [$ renderer self] r g b a)
          [$ draw-pixel self point])]
@@ -75,7 +94,42 @@
          ;; TODO: should be saving and restoring current draw-color
          (sdl-set-render-draw-color [$ renderer self] r g b a)
          [$ draw-rectangle self rect])]
-      [(draw-circle self circle) '()]
+      [(draw-colored-circle self circle)
+       (let-values (((r g b a) [$ rgba [$ color circle]]))
+         ;; TODO: there should be a method to set render color
+         ;; that just takes a color ob. that will remove
+         ;; a lot of this duplicated stuff.
+         (sdl-set-render-draw-color [$ renderer self] r g b a)
+         [$ draw-circle self circle])]
+      [(draw-circle self circle)
+       ;; implementation of the midpoint circle algorithm
+       ;; https://en.wikipedia.org/wiki/Midpoint_circle_algorithm
+       ;;(draw-colored-pixel self point)
+       (let* ((radius (inexact->exact [$ radius circle]))
+              (x0 [$ x [$ point circle]])
+              (y0 [$ y [$ point circle]])
+              (x (sub1 radius))
+              (y 0) (dx 1) (dy 1)
+              (err (- dx (bitwise-arithmetic-shift-left radius 1))))
+         (while (>= x y)
+           [$ draw-pixel self (new-point (+ x0 x) (+ y0 y))]
+           [$ draw-pixel self (new-point (+ x0 y) (+ y0 x))]
+           [$ draw-pixel self (new-point (- x0 y) (+ y0 x))]
+           [$ draw-pixel self (new-point (- x0 x) (+ y0 y))]
+           [$ draw-pixel self (new-point (- x0 x) (- y0 y))]
+           [$ draw-pixel self (new-point (- x0 y) (- y0 x))]
+           [$ draw-pixel self (new-point (+ x0 y) (- y0 x))]
+           [$ draw-pixel self (new-point (+ x0 x) (- y0 y))]
+
+           (when (<= err 0)
+             (set! y (add1 y))
+             (set! err (+ err dy))
+             (set! dy (+ dy 2)))
+
+           (when (> err 0)
+             (set! x (sub1 x))
+             (set! dx (+ dx 2))
+             (set! err (+ err (- dx (bitwise-arithmetic-shift-left radius 1)))))))]
       [(draw-globs self globs)
        (map
          (lambda (glob)

@@ -43,8 +43,8 @@
        ;; compare fields here
        (= 1 1)])))
 
-;; eff polygons for now. circs and rects only.
-;; also lines....
+;; NOTE: move all this to a shapes.ss files or something.
+;; NOTE add polygons, etc later if desired...
 (define *known-shape-types* (make-parameter '(circle rectangle)))
 
 (define new-point
@@ -117,6 +117,23 @@
         [(delegate self) proto-shape]))))
 
 (define-predicate circle?)
+
+;; all these color objects
+;; basically have the same shape.
+;; it might be useful/interesting
+;; to be able to add colors to
+;; things without writing a whole
+;; procedure to do so.
+(define new-colored-circle
+  (lambda (pt r color)
+    (let ((proto-circ (new-circle pt r)))
+      (when (not (color? color))
+        (error "new-colored-circle" "invalid color" color))
+      (object ([color color])
+        [(colored-circle? self) #t]
+        [(delegate self) proto-circ]))))
+
+(define-predicate colored-circle?)
 
 (define new-rectangle
   (let ([proto-shape (new-shape 'rectangle)])
