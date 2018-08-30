@@ -33,6 +33,16 @@
 ;; about how we are going to deal
 ;; with "resources" in the system
 ;; that will become part of the world glob list
+;;
+;; NOTE: look into https://github.com/grimfang4/SDL_FontCache
+;; for a more efficient solution
+;; ...creating these surfaces and textures every
+;; frame seems like a waste.
+;;
+;; ...in theory, we could define our own
+;; fonts which are just collection of glyphs
+;; represented by bitmaps
+;; that are somehow scaled by pt...
 (define new-font
   (lambda (file name point)
     ;; plz check first...
@@ -132,11 +142,7 @@
                        [$ draw-rectangle self thing]))
                     (else (error "av-interface:draw" "unrecognized shape" thing))))
              ((label? thing)
-              [$ draw-label self thing]
-              ;(if (colored-label? thing)
-                ;[$ draw-colored-label self thing]
-                ;[$ draw-label self thing])
-              )
+              [$ draw-label self thing])
              (else (error "av-interface:draw unrecognzied thing" thing)))]
       [(get-keyboard-input self) '()]
       ;; present a nice, clean mouse-input instance back instead of
@@ -233,19 +239,22 @@
        (when (colored-font? [$ font label])
          [$ set-render-draw-color! self [$ color [$ font label]]])
 
-       ;; garbage-collected automatically?
-       ;; if all return values come from
-       ;; functions created with define-sdl-func,
-       ;; and those functions have return types from
-       ;; the list starting on line 65 of sdl2/ffi.ss,
-       ;; then it should be.
        (let* ((sdl-color [$ get-render-draw-color self])
-              (surface (sttf-render-text-solid
+              ;; https://www.libsdl.org/projects/docs/SDL_ttf/SDL_ttf_35.html
+              ;; sttf-render-text-solid looks poor...
+              ;; sttf-render-text-shaded (slower and nicer)
+              ;; sttf-render-text-blended (apparently very slow and very nice)
+              ;; we need a fg and bg color for -shaded
+              ;; this really does look significantly better...
+              ;; -shaded may end up being the happy medium, but
+              ;; this makes things legible easily.
+              (surface (sttf-render-text-blended
                          [$ sdl-font [$ font label]]
                          [$ text label]
                          sdl-color))
               (texture (sdl-create-texture-from-surface [$ renderer self] surface))
               (dest-rect [$ bounding-rect label]))
+
          (sdl-render-copy
            [$ renderer self]
            texture

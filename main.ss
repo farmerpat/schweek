@@ -217,7 +217,14 @@
    w
    (new-label
      "message!"
-     (new-colored-font "DejaVuSerif.ttf" 'deja-vu-serif 26 color-black)
+     (new-colored-font "DejaVuSerif.ttf" 'deja-vu-serif 56 color-black)
+     (new-point 500 400))]
+
+[$ add-glob!
+   w
+   (new-label
+     "another message!"
+     (new-colored-font "DejaVuSans.ttf" 'deja-vu-sans 26 color-black)
      (new-point 500 500))]
 
 (define src-rect
