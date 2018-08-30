@@ -59,29 +59,36 @@
 
 ;; font-color border-color?
 ;; create bordered-colored-lable
+;; it might make more sense for a label to just be a string
+;; and a font that we render blindly...
+;; namely, we can just lose the rect for now,
+;; calculate the optimum size, and use that
+;; for the target rect, doing nothing with
+;; background.  then we could create
+;; an object that combines labels and
+;; filled rectangles into what I first attempted.
 (define new-label
-  (lambda (text font rect)
+  (lambda (text font point)
     (when (or (not (string? text))
               (not (font? font))
-              (not (rectangle? rect)))
-      (error "new-label" "invalid arg(s)" text font))
-    (object ([text text] [font font] [bounding-rect rect])
-      [(label? self) #t])))
+              (not (point? point)))
+      (error "new-label" "invalid arg(s)" text font point))
+    (let* ((my-sdl-font [$ sdl-font font])
+           (width-ptr (int-guarded-ptr))
+           (height-ptr (int-guarded-ptr)))
+
+      (ttf-size-text my-sdl-font text width-ptr height-ptr)
+
+      (let* ((ideal-width (ftype-ref int () width-ptr))
+             (ideal-height (ftype-ref int () height-ptr))
+             (bounding-rect (new-rectangle point ideal-width ideal-height)))
+        (object ([text text] [font font] [bounding-rect bounding-rect])
+          [(label? self) #t])))))
 
 (define-predicate label?)
 
-(define new-colored-label
-  (lambda (text font rect color)
-    (when (not (color? color))
-      (error "new-colored-label" "invalid color" color))
-    (let ((proto-label (new-label text font rect)))
-      (object ([color color])
-        [(colored-label? self) #t]
-        [(delegate self) proto-label]))))
-
-(define-predicate colored-label?)
-
 (define-ftype-allocator uint8-guarded-ptr uint8)
+(define-ftype-allocator int-guarded-ptr int)
 
 ;; this is getting huge.
 ;; to start spit off font stuff
@@ -125,9 +132,11 @@
                        [$ draw-rectangle self thing]))
                     (else (error "av-interface:draw" "unrecognized shape" thing))))
              ((label? thing)
-              (if (colored-label? thing)
-                [$ draw-colored-label self thing]
-                [$ draw-label self thing]))
+              [$ draw-label self thing]
+              ;(if (colored-label? thing)
+                ;[$ draw-colored-label self thing]
+                ;[$ draw-label self thing])
+              )
              (else (error "av-interface:draw unrecognzied thing" thing)))]
       [(get-keyboard-input self) '()]
       ;; present a nice, clean mouse-input instance back instead of
@@ -220,41 +229,28 @@
              (set! x (sub1 x))
              (set! dx (+ dx 2))
              (set! err (+ err (- dx (bitwise-arithmetic-shift-left radius 1)))))))]
-      [(draw-colored-label self label)
-       [$ set-render-draw-color! self [$ color label]]
-       [$ draw-label self label]]
       [(draw-label self label)
-       [$ draw-filled-rectangle self [$ bounding-rect label]]
-
        (when (colored-font? [$ font label])
          [$ set-render-draw-color! self [$ color [$ font label]]])
 
        ;; garbage-collected automatically?
+       ;; if all return values come from
+       ;; functions created with define-sdl-func,
+       ;; and those functions have return types from
+       ;; the list starting on line 65 of sdl2/ffi.ss,
+       ;; then it should be.
        (let* ((sdl-color [$ get-render-draw-color self])
               (surface (sttf-render-text-solid
                          [$ sdl-font [$ font label]]
                          [$ text label]
                          sdl-color))
-              (ideal-width (ftype-ref sdl-surface-t (w) surface))
-              (ideal-height (ftype-ref sdl-surface-t (h) surface))
               (texture (sdl-create-texture-from-surface [$ renderer self] surface))
-              (og-origin [$ origin [$ bounding-rect label]])
-              (*padding* 2)
-              (point (new-point (+ *padding* [$ x og-origin])
-                                (+ *padding* [$ y og-origin])))
-              (dest-rect (new-rectangle point ideal-width ideal-height)))
-
+              (dest-rect [$ bounding-rect label]))
          (sdl-render-copy
            [$ renderer self]
            texture
            (make-ftype-pointer sdl-rect-t 0)
-           ;(make-ftype-pointer sdl-rect-t 0)
-           ;; could (optionally?) shrink for padding...
-           [$ rectangle->sdl-rect self dest-rect]
-           ;[$ rectangle->sdl-rect self [$ gen-inner-padded-rect [$ bounding-rect label] 0]]
-           )
-         )
-       ]
+           [$ rectangle->sdl-rect self dest-rect]))]
       ;; TODO: use me all over
       [(set-render-draw-color! self color)
        (let-values (((r g b a) [$ rgba color]))

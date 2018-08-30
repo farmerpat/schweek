@@ -55,6 +55,15 @@
       (when (not (and (integer? x) (integer? y) (>= x 0) (>= y 0)))
         (error "new-point" "invalid argument(s)" x y))
       (object ([x x] [y y])
+        [(->string self)
+         (string-append
+           "POINT ("
+           " x: "
+           (number->string [$ x self])
+           " y: "
+           (number->string [$ y self])
+           ")")
+         ]
         [(delegate self) proto-point]))))
 
 (define-predicate point?)
@@ -140,8 +149,18 @@
 (define new-rectangle
   (let ([proto-shape (new-shape 'rectangle)])
     (lambda (top-left-point w h)
-      (object ([origin top-left-point] [width w] [height h])
+      (object ([origin [$ deep-clone top-left-point]] [width w] [height h])
         [(rectangle? self) #t]
+        [(->string self)
+         (string-append
+           "RECTANGLE ("
+           " origin: "
+           [$ ->string origin]
+           " width: "
+           (number->string [$ width self])
+           " height: "
+           (number->string [$ height self])
+           ")")]
         [(area self) (* [$ width self] [$ height self])]
         [(perimiter self)
          (+ (* 2 [$ width self])

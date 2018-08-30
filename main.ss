@@ -215,11 +215,10 @@
 ;; font/point will take up.
 [$ add-glob!
    w
-   (new-colored-label
+   (new-label
      "message!"
-     (new-colored-font "DejaVuSerif.ttf" 'deja-vu-serif 17 color-black)
-     (new-rectangle (new-point 500 500) 117 21)
-     color-white)]
+     (new-colored-font "DejaVuSerif.ttf" 'deja-vu-serif 26 color-black)
+     (new-point 500 500))]
 
 (define src-rect
   (gen-rect 64 64))
