@@ -20,6 +20,7 @@
 
 (import (chezscheme)
         (sdl2)
+        (sdl2 ttf)
         (tiny-talk))
 
 (define *quit* (make-parameter #f))
@@ -177,6 +178,11 @@
   (sdl-render-fill-rect renderer (gen-rect 1024 768)))
 
 (sdl-library-init)
+;(sdl-ttf-library-init)
+
+;(sdl-shim-ttf-init "/home/patrick/scheme-libs/thunderchez/sdl2/ttf-shim/ttfshim.so")
+(load-shared-object "/home/patrick/scheme-libs/thunderchez/sdl2/ttf-shim/ttfshim.so")
+(ttf-init)
 
 (define retval  (sdl-init (sdl-initialization 'video 'events)))
 
@@ -203,8 +209,17 @@
 
 [$ add-glob! w (new-colored-cross (new-point 500 100) 10 10 color-black)]
 
-;(define bmp-surface (sdl-load-bmp "ship.bmp"))
-;(define img-texture (sdl-create-texture-from-surface renderer bmp-surface))
+;; should see if it's possible to calculate
+;; what the dimensions of the label should be
+;; based on how much space the message in
+;; font/point will take up.
+[$ add-glob!
+   w
+   (new-colored-label
+     "message!"
+     (new-colored-font "DejaVuSerif.ttf" 'deja-vu-serif 17 color-black)
+     (new-rectangle (new-point 500 500) 117 21)
+     color-white)]
 
 (define src-rect
   (gen-rect 64 64))
@@ -264,6 +279,8 @@
 (sdl-destroy-window window)
 ;(sdl-destroy-texture img-texture)
 (sdl-destroy-renderer renderer)
+
+(ttf-quit)
 (sdl-quit)
 
 (scheme-start (lambda fns '()))

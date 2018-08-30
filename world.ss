@@ -135,6 +135,8 @@
 
 (define-predicate colored-circle?)
 
+;; could define convenience functions...
+;; eg. [$ x my-rect] == [$ x [$ point my-rect]]
 (define new-rectangle
   (let ([proto-shape (new-shape 'rectangle)])
     (lambda (top-left-point w h)
@@ -144,6 +146,14 @@
         [(perimiter self)
          (+ (* 2 [$ width self])
             (* 2 [$ height self]))]
+        [(gen-inner-padded-rect self pixels-of-padding)
+         ;; add pixels-of-padding to x and y
+         ;; subtract pixels-of-padding from w/h
+         ;; these new point values should be ensured >=0 ?
+         (new-rectangle (new-point (+ [$ x [$ origin self]] pixels-of-padding)
+                                   (+ [$ y [$ origin self]] pixels-of-padding))
+                        (- [$ width self] pixels-of-padding)
+                        (- [$ height self] pixels-of-padding))]
         [(delegate self) proto-shape]))))
 
 (define-predicate rectangle?)

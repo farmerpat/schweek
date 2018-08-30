@@ -12,6 +12,7 @@
 ;(load "color.ss")
 (import (chezscheme)
         (sdl2)
+        (sdl2 ttf)
         (tiny-talk))
 
 ;; put me in a utils file or something...
@@ -28,6 +29,66 @@
            ...
            (if pred (while-loop))))])))
 
+;; in general, need to thinking
+;; about how we are going to deal
+;; with "resources" in the system
+;; that will become part of the world glob list
+(define new-font
+  (lambda (file name point)
+    ;; plz check first...
+    (let ((sdl-font (ttf-open-font file point)))
+      (object ([name name] [file file] [point point] [sdl-font sdl-font])
+        [(font? self) #t]
+        ;; it would be nice if we could use define-ftype-allocator
+        ;; or something that will free this automatically once
+        ;; the object containing it goes out of scope...
+        [(free-resources! self)
+         ;; should probably validate this thing first...
+         (ttf-close-font sdl-font)]))))
+
+(define-predicate font?)
+
+(define new-colored-font
+  (lambda (file name point color)
+    (let ((proto-font (new-font file name point)))
+      (object ([color color])
+        [(colored-font? self) #t]
+        [(delegate self) proto-font]))))
+
+(define-predicate colored-font?)
+
+;; font-color border-color?
+;; create bordered-colored-lable
+(define new-label
+  (lambda (text font rect)
+    (when (or (not (string? text))
+              (not (font? font))
+              (not (rectangle? rect)))
+      (error "new-label" "invalid arg(s)" text font))
+    (object ([text text] [font font] [bounding-rect rect])
+      [(label? self) #t])))
+
+(define-predicate label?)
+
+(define new-colored-label
+  (lambda (text font rect color)
+    (when (not (color? color))
+      (error "new-colored-label" "invalid color" color))
+    (let ((proto-label (new-label text font rect)))
+      (object ([color color])
+        [(colored-label? self) #t]
+        [(delegate self) proto-label]))))
+
+(define-predicate colored-label?)
+
+(define-ftype-allocator uint8-guarded-ptr uint8)
+
+;; this is getting huge.
+;; to start spit off font stuff
+;; into av-font-interface
+;; points/lines could be another
+;; object its composed of.
+;; as could a specific shape interface
 (define new-av-interface
   ;; if we just passed in window,
   ;; world could create its own renderer...
@@ -63,6 +124,10 @@
                        [$ draw-colored-rectangle self thing]
                        [$ draw-rectangle self thing]))
                     (else (error "av-interface:draw" "unrecognized shape" thing))))
+             ((label? thing)
+              (if (colored-label? thing)
+                [$ draw-colored-label self thing]
+                [$ draw-label self thing]))
              (else (error "av-interface:draw unrecognzied thing" thing)))]
       [(get-keyboard-input self) '()]
       ;; present a nice, clean mouse-input instance back instead of
@@ -97,6 +162,9 @@
              (rw [$ width rect])
              (rh [$ height rect]))
          (new-struct sdl-rect-t (x rx) (y ry) (w rw) (h rh)))]
+      [(draw-filled-rectangle self rect)
+       (let ((sdl-rect [$ rectangle->sdl-rect self rect]))
+         (sdl-render-fill-rect [$ renderer self] sdl-rect))]
       [(draw-rectangle self rect)
        (let ((sdl-rect [$ rectangle->sdl-rect self rect]))
          (sdl-render-draw-rect [$ renderer self] sdl-rect))]
@@ -114,15 +182,6 @@
          [$ draw-cross self cross])]
       [(draw-cross self cross)
        (let-values (((l1 l2) [$ get-lines cross]))
-                   (display l1)
-                   (newline)
-                   (display l2)
-                   (newline)
-                   (display (line? l1))
-                   (newline)
-                   (display (line? l2))
-                   (newline)
-                   ;(inspect l1)
          [$ draw-line self l1]
          [$ draw-line self l2])]
       [(draw-colored-circle self circle)
@@ -161,6 +220,59 @@
              (set! x (sub1 x))
              (set! dx (+ dx 2))
              (set! err (+ err (- dx (bitwise-arithmetic-shift-left radius 1)))))))]
+      [(draw-colored-label self label)
+       [$ set-render-draw-color! self [$ color label]]
+       [$ draw-label self label]]
+      [(draw-label self label)
+       [$ draw-filled-rectangle self [$ bounding-rect label]]
+
+       (when (colored-font? [$ font label])
+         [$ set-render-draw-color! self [$ color [$ font label]]])
+
+       ;; garbage-collected automatically?
+       (let* ((sdl-color [$ get-render-draw-color self])
+              (surface (sttf-render-text-solid
+                         [$ sdl-font [$ font label]]
+                         [$ text label]
+                         sdl-color))
+              (ideal-width (ftype-ref sdl-surface-t (w) surface))
+              (ideal-height (ftype-ref sdl-surface-t (h) surface))
+              (texture (sdl-create-texture-from-surface [$ renderer self] surface))
+              (og-origin [$ origin [$ bounding-rect label]])
+              (*padding* 2)
+              (point (new-point (+ *padding* [$ x og-origin])
+                                (+ *padding* [$ y og-origin])))
+              (dest-rect (new-rectangle point ideal-width ideal-height)))
+
+         (sdl-render-copy
+           [$ renderer self]
+           texture
+           (make-ftype-pointer sdl-rect-t 0)
+           ;(make-ftype-pointer sdl-rect-t 0)
+           ;; could (optionally?) shrink for padding...
+           [$ rectangle->sdl-rect self dest-rect]
+           ;[$ rectangle->sdl-rect self [$ gen-inner-padded-rect [$ bounding-rect label] 0]]
+           )
+         )
+       ]
+      ;; TODO: use me all over
+      [(set-render-draw-color! self color)
+       (let-values (((r g b a) [$ rgba color]))
+         (sdl-set-render-draw-color [$ renderer self] r g b a))]
+      [(get-render-draw-color self)
+       (let ((r-ptr (uint8-guarded-ptr))
+             (g-ptr (uint8-guarded-ptr))
+             (b-ptr (uint8-guarded-ptr))
+             (a-ptr (uint8-guarded-ptr)))
+         (when (negative? (sdl-get-render-draw-color
+                            [$ renderer self]
+                            r-ptr g-ptr b-ptr a-ptr))
+           (error "av-interface:get-render-draw-color" "sdl-get-render-draw-color failed"))
+         (new-struct sdl-color-t
+           (r (ftype-ref uint8 () r-ptr))
+           (g (ftype-ref uint8 () g-ptr))
+           (b (ftype-ref uint8 () b-ptr))
+           (a (ftype-ref uint8 () a-ptr))))]
       [(draw-globs self globs)
        (map
          (lambda (glob)
