@@ -35,15 +35,29 @@
     (object ([renderer window-renderer])
       [(av-interface? self) #t]
       [(draw self thing)
-       (cond ((colored-point? thing)
-              [$ draw-colored-pixel self thing])
-             ((colored-line? thing)
-              [$ draw-line self thing])
+       (cond ((point? thing)
+              (if (colored-point? thing)
+                [$ draw-colored-pixel self thing]
+                [$ draw-pixel self thing]))
+             ((line? thing)
+              (if (colored-line? thing)
+                [$ draw-colored-line self thing]
+                [$ draw-line self thing]))
              ((shape? thing)
               (cond ((circle? thing)
                      (if (colored-circle? thing)
                        [$ draw-colored-circle self thing]
                        [$ draw-circle self thing]))
+                    ;; as it stands, we have to check
+                    ;;cross before rectangle, or make
+                    ;; the if in rectangle? clause
+                    ;; a cond that checks for rect
+                    ;; and colored rect.
+                    ;; b/c a cross "is" a rect.
+                    ((cross? thing)
+                     (if (colored-cross? thing)
+                       [$ draw-colored-cross self thing]
+                       [$ draw-cross self thing]))
                     ((rectangle? thing)
                      (if (colored-rectangle? thing)
                        [$ draw-colored-rectangle self thing]
@@ -94,6 +108,23 @@
          ;; TODO: should be saving and restoring current draw-color
          (sdl-set-render-draw-color [$ renderer self] r g b a)
          [$ draw-rectangle self rect])]
+      [(draw-colored-cross self cross)
+       (let-values (((r g b a) [$ rgba [$ color cross]]))
+         (sdl-set-render-draw-color [$ renderer self] r g b a)
+         [$ draw-cross self cross])]
+      [(draw-cross self cross)
+       (let-values (((l1 l2) [$ get-lines cross]))
+                   (display l1)
+                   (newline)
+                   (display l2)
+                   (newline)
+                   (display (line? l1))
+                   (newline)
+                   (display (line? l2))
+                   (newline)
+                   ;(inspect l1)
+         [$ draw-line self l1]
+         [$ draw-line self l2])]
       [(draw-colored-circle self circle)
        (let-values (((r g b a) [$ rgba [$ color circle]]))
          ;; TODO: there should be a method to set render color

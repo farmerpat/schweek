@@ -201,6 +201,8 @@
   ((> i 400) '())
   [$ add-glob! w (new-colored-circle (new-point (+ i 200) 200) 25 color-white)])
 
+[$ add-glob! w (new-colored-cross (new-point 500 100) 10 10 color-black)]
+
 ;(define bmp-surface (sdl-load-bmp "ship.bmp"))
 ;(define img-texture (sdl-create-texture-from-surface renderer bmp-surface))
 

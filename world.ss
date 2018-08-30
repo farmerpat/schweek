@@ -52,7 +52,7 @@
           (object ()
             [(point? self) #t])])
     (lambda (x y)
-      (when (not (and (number? x) (number? y)))
+      (when (not (and (integer? x) (integer? y) (>= x 0) (>= y 0)))
         (error "new-point" "invalid argument(s)" x y))
       (object ([x x] [y y])
         [(delegate self) proto-point]))))
@@ -156,6 +156,36 @@
         [(delegate self) proto-rect]))))
 
 (define-predicate colored-rectangle?)
+
+;; actually "is" a rectangle, it just gets drawn differently.
+(define new-cross
+  (lambda (top-left-point w h)
+    (let ((proto-rect (new-rectangle top-left-point w h)))
+      (object ()
+        [(cross? self) #t]
+        [(get-lines self)
+         (let* ((min-x [$ x [$ origin self]])
+                (min-y [$ y [$ origin self]])
+                (max-x (+ min-x [$ width self]))
+                (max-y (+ min-y [$ height self])))
+           (values (new-line (new-point min-x min-y)
+                             (new-point max-x max-y))
+                   (new-line (new-point max-x min-y)
+                             (new-point min-x max-y))))]
+        [(delegate self) proto-rect]))))
+
+(define-predicate cross?)
+
+(define new-colored-cross
+  (lambda (top-left-point w h color)
+    (let ((proto-cross (new-cross top-left-point w h)))
+      (when (not (color? color))
+        (error "new-colored-cross" "invalid color" color))
+      (object ([color color])
+        [(colored-cross? self) #t]
+        [(delegate self) proto-cross]))))
+
+(define-predicate colored-cross?)
 
 ;; e.g.
 ;(define c (new-circle (new-point 350 50) 33.1))
