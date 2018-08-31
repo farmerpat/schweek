@@ -213,6 +213,7 @@
 ;; what the dimensions of the label should be
 ;; based on how much space the message in
 ;; font/point will take up.
+
 [$ add-glob!
    w
    (new-label
@@ -222,10 +223,11 @@
 
 [$ add-glob!
    w
-   (new-label
-     "another message!"
+   (new-bordered-label
+     "it was the best of times, it was the worst of times..."
      (new-colored-font "DejaVuSans.ttf" 'deja-vu-sans 26 color-black)
-     (new-point 500 500))]
+     (new-point 100 500)
+     (new-border [$ get-color *c64-palette* 'light-red] 15))]
 
 (define src-rect
   (gen-rect 64 64))

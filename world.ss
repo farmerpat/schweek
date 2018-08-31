@@ -15,6 +15,13 @@
 ;; monkey with all that w/o hacking the scheme...
 ;; it seems like there isn't...
 
+;; is it ever useful to have objects even further
+;; down? e.g. new-primitive where it has one of
+;; several "primivive" data types. that would have
+;; to include procedures. it seems like it would
+;; involve hacking the reader or creating an
+;; intermediary one or something...
+
 ;; can't we load this conditionally?
 ;(load "tiny-talk.sls")
 

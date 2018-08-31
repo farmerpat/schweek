@@ -8,6 +8,29 @@
 ;; there are some things in the "main loop" that are exposed
 ;; sdl calls that would have to be addressed too.
 
+;; start thinking about where to draw the sdl abstraction
+;; line, and get above it asap.
+;; it ought to be a very clear line. for instance,
+;; it seems better to have sdl appear many times
+;; in a couple of files. right now, all the sdl
+;; calls happen here and in main.
+;; that's pretty good, but things start to get unclear sometimes.
+;; fonts, for instance (and so objects that use fonts also)...
+;; in the current implementation of fonts, our font constructor
+;; has to know about sdl font.  That is lousy. Better
+;; would be to have font-interface.ss or some such thing.
+;; ideally, we could have font.ss that imports font-interface.ss.
+;; if it becomes desirable to support other backends,
+;; all the -interface.ss files could have flags set in them.
+;; and define their exported procedures based on them.
+;; for example, this file would only export new-av-interface,
+;; but it would be either
+;; (define new-av-interface new-sdl-interface)
+;; or
+;; (define new-av-interface new-other-backend-interface)
+;; depending on the backend requested.
+;; ...similarly for the other -interface files.
+
 ;; probably just put tiny-talk in ~/scheme-libs
 ;(load "color.ss")
 (import (chezscheme)
@@ -97,6 +120,34 @@
 
 (define-predicate label?)
 
+(define new-border
+  (lambda (color thickness)
+    (object ([color color] [thickness thickness])
+      [(border? self) #t])))
+
+(define-predicate border?)
+
+(define new-bordered-label
+  (lambda (text font point border)
+    (when (or (not (string? text))
+              (not (font? font))
+              (not (point? point))
+              (not (border? border)))
+      (error
+        "bordered-label"
+        "invalid arg(s)"
+        text font point border))
+
+    (let ((proto-label (new-label text font point)))
+      (object ([border border])
+        [(bordered-label? self) #t]
+        [(color self) [$ color [$ border self]]]
+        [(thickness self) [$ thickness [$ border self]]]
+        [(label self) proto-label]
+        [(delegate self) proto-label]))))
+
+(define-predicate bordered-label?)
+
 (define-ftype-allocator uint8-guarded-ptr uint8)
 (define-ftype-allocator int-guarded-ptr int)
 
@@ -142,7 +193,9 @@
                        [$ draw-rectangle self thing]))
                     (else (error "av-interface:draw" "unrecognized shape" thing))))
              ((label? thing)
-              [$ draw-label self thing])
+              (if (bordered-label? thing)
+                [$ draw-bordered-label self thing]
+                [$ draw-label self thing]))
              (else (error "av-interface:draw unrecognzied thing" thing)))]
       [(get-keyboard-input self) '()]
       ;; present a nice, clean mouse-input instance back instead of
@@ -235,6 +288,21 @@
              (set! x (sub1 x))
              (set! dx (+ dx 2))
              (set! err (+ err (- dx (bitwise-arithmetic-shift-left radius 1)))))))]
+      [(draw-border-around self border rect-to-border)
+       (let* ((padding [$ thickness border])
+              (p [$ origin rect-to-border])
+              (border-origin (new-point (- [$ x p] padding)
+                                        (- [$ y p] padding)))
+              (new-w (+ (* 2 padding) [$ width rect-to-border]))
+              (new-h (+ (* 2 padding) [$ height rect-to-border]))
+              (border-rect (new-colored-rectangle
+                             border-origin
+                             new-w new-h [$ color border])))
+
+         [$ draw-colored-rectangle self border-rect])]
+      [(draw-bordered-label self bl)
+       [$ draw-border-around self [$ border bl] [$ bounding-rect bl]]
+       [$ draw-label self [$ label bl]]]
       [(draw-label self label)
        (when (colored-font? [$ font label])
          [$ set-render-draw-color! self [$ color [$ font label]]])
