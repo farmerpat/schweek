@@ -62,6 +62,14 @@
                             (and (timer? g)
                                  (eq? [$ timer-id g] target-timer-id)))]))))
                (glob-rec (cdr timers))))))]
+      [(process-event self event)
+       (let ((handlers (filter event-handler? [$ *globs* self])))
+         (when (not (null? handlers))
+           (let glob-rec ((handlers handlers))
+             (when (not (null? handlers))
+               (let ((handler (car handlers)))
+                 [$ handle-event handler event]
+                 (glob-rec (cdr handlers)))))))]
 
       [(=? self other)
        (unless (world? other)

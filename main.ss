@@ -18,6 +18,7 @@
 (load "color.ss")
 (load "av-interface.ss")
 (load "timer-interface.ss")
+(load "event-interface.ss")
 
 (import (chezscheme)
         (sdl2)
@@ -135,6 +136,16 @@
 [$ add-glob! w
    (new-one-shot-timer 3000 (lambda () (display "fyf alot") (newline)))]
 
+[$ add-glob! w
+   (new-event-handler
+     (lambda (e)
+       (if (mouse-event? e)
+         (begin
+           (display "das mouse ")
+           (display "at: ")
+           (display [$ ->string [$ coords e]])
+           (newline)))))]
+
 (define src-rect
   (gen-rect 64 64))
 
@@ -178,14 +189,11 @@
       (if (not (zero? (sdl-atomic-get *atomic-click-initiated-flag*)))
         (begin
           (if (not (zero? (sdl-atomic-get *atomic-single-click-available-flag*)))
-            (begin
-              ;; so grab its coordinates and any other
-              ;; pertinent information and send it to
-              ;; the world...
-              ;; maybe we have objects register for certain
-              ;; types of events...
-              (display "fire single click")
-              (newline)
+            (let* ((mouse (get-mouse-event event))
+                   (x (get-mouse-event-x mouse))
+                   (y (get-mouse-event-y mouse))
+                   (e (new-mouse-event 'single-click (new-point x y))))
+              [$ process-event w e]
               (sdl-atomic-set *atomic-click-initiated-flag* 0))
             (begin
               (sdl-atomic-set *atomic-click-initiated-flag* 0)
@@ -208,9 +216,8 @@
 ;; keep your eyes peeled for a nice abstraction or two...
 
 ;; need
-;;  timer-interface.ss
-;;  event-interface.ss
 ;;  window-interface.ss
+;;  and to clean up interface abstraction lines
 
 (let mortality-loop ()
   ;; maybe we should be flushing these...
