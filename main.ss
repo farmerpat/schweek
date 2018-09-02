@@ -17,11 +17,14 @@
 (load "world.ss")
 (load "color.ss")
 (load "av-interface.ss")
+(load "timer-interface.ss")
 
 (import (chezscheme)
         (sdl2)
         (sdl2 ttf)
         (tiny-talk))
+
+(load "sdl-helpers.ss")
 
 (define *quit* (make-parameter #f))
 
@@ -38,79 +41,6 @@
 
 (define (bg-color-a)
   (cadddr (*bg-color*)))
-
-(define (sdl-common-event-t? ob)
-  (and (ftype-pointer? ob)
-       (ftype-pointer? sdl-common-event-t ob)))
-
-(define (sdl-event-t? ob)
-  (and (ftype-pointer? ob)
-       (ftype-pointer? sdl-event-t ob)))
-
-(define (get-type event)
-  (if (ftype-pointer? event)
-      (ftype-ref sdl-event-t (type) event)))
-
-(define (get-type-symbol event)
-  (if (ftype-pointer? event)
-      (sdl-event-type-ref (get-type event))))
-
-(define (get-mouse-event-button mouse)
-  (if (ftype-pointer? mouse)
-    (ftype-ref sdl-mouse-button-event-t (button) mouse)))
-
-(define (get-mouse-event-x mouse)
-  (if (ftype-pointer? mouse)
-    (ftype-ref sdl-mouse-button-event-t (x) mouse)))
-
-(define (get-mouse-event-y mouse)
-  (if (ftype-pointer? mouse)
-    (ftype-ref sdl-mouse-button-event-t (y) mouse)))
-
-(define (is-window-event? event)
-  (eq? 'windowevent (get-type-symbol event)))
-
-(define (is-quit-event? event)
-  (eq? 'quit (get-type-symbol event)))
-
-(define (is-key-down-event? event)
-  (eq? 'keydown (get-type-symbol event)))
-
-(define (is-key-up-event? event)
-  (eq? 'keyup (get-type-symbol event)))
-
-(define (is-mouse-buttom-down-event? event)
-  (eq? 'mousebuttondown (get-type-symbol event)))
-
-;; does this become get-event-kbd-event ?
-;; it think it does.
-;; as mentioned above, figure out how to
-;; auto-generate this stuff as soon as possible.
-(define (get-kbd-event event)
-  (ftype-&ref sdl-event-t (key) event))
-
-(define (get-mouse-event event)
-  (ftype-&ref sdl-event-t (button) event))
-
-;; same as type in parent sdl-event-t
-(define (get-kbd-event-type kbd-event-ptr)
-  (ftype-ref sdl-keyboard-event-t (type) kbd-event-ptr))
-
-;; sdl-keysym-t
-(define (get-kbd-event-keysym kbd-event-ptr)
-  (ftype-&ref sdl-keyboard-event-t (keysym) kbd-event-ptr))
-
-(define (get-keysym-key-code ksm)
-  (ftype-&ref sdl-keysym-t (sym) ksm))
-
-(define (get-keysym-scancode ksm)
-  (ftype-&ref sdl-keysym-t (scancode) ksm))
-
-(define gen-rect
-  (case-lambda
-    ((gw gh) (gen-rect 0 0 gw gh))
-    ((gx gy gw gh)
-     (new-struct sdl-rect-t (x gx) (y gy) (w gw) (h gh)))))
 
 (define *event-handlers* (make-parameter '()))
 
@@ -145,38 +75,6 @@
 (define (call-draw-procedures)
   (call-all (*draw-procedures*)))
 
-(define (generate-kbd-code-predicate sym)
-  (lambda (kbd-event)
-    (let* ((ksym (get-kbd-event-keysym kbd-event))
-           (key-code-ptr (get-keysym-key-code ksym))
-           (code (ftype-ref int () key-code-ptr)))
-      (if (eq? (sdl-keycode sym) code) #t #f))))
-
-(define (generate-keydown-handler pred? callback)
-  (lambda (event)
-    (when (is-key-down-event? event)
-      (let ((kbe (get-kbd-event event)))
-       (if (ftype-pointer? kbe)
-           (if (pred? kbe)
-               (callback)))))))
-
-(define (generate-mouse-down-hanlder pred? callback)
-  (lambda (event)
-    (when (is-mouse-buttom-down-event? event)
-      (let ((mouse (get-mouse-event event)))
-        (if (ftype-pointer? mouse)
-          (if (pred? mouse)
-            (callback)))))))
-
-(define (clear-renderer)
-  (sdl-set-render-draw-color
-    renderer
-    (bg-color-r)
-    (bg-color-g)
-    (bg-color-b)
-    (bg-color-a))
-  (sdl-render-fill-rect renderer (gen-rect 1024 768)))
-
 (sdl-library-init)
 ;(sdl-ttf-library-init)
 
@@ -184,7 +82,12 @@
 (load-shared-object "/home/patrick/scheme-libs/thunderchez/sdl2/ttf-shim/ttfshim.so")
 (ttf-init)
 
-(define retval  (sdl-init (sdl-initialization 'video 'events)))
+;; for some reason the first call always returns 0,
+;; which screws up our timers...
+(display (sdl-get-ticks))
+(newline)
+
+(define retval  (sdl-init (sdl-initialization 'video 'events 'timer 'audio)))
 
 (define window (sdl-create-window "test" 50 50 800 600 (sdl-window-flags 'shown)))
 
@@ -229,6 +132,9 @@
      (new-point 100 500)
      (new-border [$ get-color *c64-palette* 'light-red] 15))]
 
+[$ add-glob! w
+   (new-one-shot-timer 3000 (lambda () (display "fyf alot") (newline)))]
+
 (define src-rect
   (gen-rect 64 64))
 
@@ -253,19 +159,105 @@
     (generate-kbd-code-predicate 'escape)
     (lambda () (*quit* #t))))
 
+;(define *click-initiated-flag* #f)
+;(define *single-click-available-flag* #t)
+
+(define *atomic-click-initiated-flag*
+  (new-struct sdl-atomic-t))
+
+(sdl-atomic-set *atomic-click-initiated-flag* 0)
+
+(define *atomic-single-click-available-flag*
+  (new-struct sdl-atomic-t))
+
+(sdl-atomic-set *atomic-single-click-available-flag* 1)
+
+;; these are meant to be temporary for
+;; help clarifying what's going on in
+;; the handler...
+(define-syntax then
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ sexp1 sexp2 ...)
+       (syntax
+         (begin
+           sexp1
+           sexp2
+           ...))))))
+
+(define-syntax else-then
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ sexp1 sexp2 ...)
+       (syntax
+         (begin
+           sexp1
+           sexp2
+           ...))))))
+
 (register-event-handler
   (lambda (event)
-    (when (is-mouse-buttom-down-event? event)
-      (let ((mouse (get-mouse-event event)))
-        (if (ftype-pointer? mouse)
-          ;; grab some shit...
-          (let ((button (get-mouse-event-button mouse))
-                (x (get-mouse-event-x mouse))
-                (y (get-mouse-event-y mouse)))
-            (display x)
-            (display ", ")
-            (display y)
-            (newline)))))))
+    (cond ((is-mouse-button-up-event? event)
+           ;; the thing is, we are getting more mouse up events
+           ;; after the first one (where this is 0) but the
+           ;; ones that come after are causing it to fire...
+           ;(newline)
+           ;(display "das mouse btn up...")
+           ;(display "*atomic-single-click-available-flag*: ")
+           ;(display (sdl-atomic-get *atomic-single-click-available-flag*))
+           ;(newline)
+           (if (not (zero? (sdl-atomic-get *atomic-click-initiated-flag*)))
+             (then
+               ;(display "mbu has click-init flag")
+               ;(newline)
+               (if (not (zero? (sdl-atomic-get *atomic-single-click-available-flag*)))
+                 (then
+                   (display "mbu: fire single click b/c atomic  non-zero")
+                   (newline)
+                   ;(display "mbu: clearing *click-initiated-flag*")
+                   ;(newline)
+                   (sdl-atomic-set *atomic-click-initiated-flag* 0)
+                   ;(set! *click-initiated-flag* #f)
+                   )
+                 (else-then
+                   ;(display "mbu: not firing b/c atom zero")
+                   ;(newline)
+                   ;(display "mbu: setting atomic non-zero")
+                   ;(newline)
+                   ;; maybe here we also clear *atomic-click-initiated-flag*
+                   (sdl-atomic-set *atomic-click-initiated-flag* 0)
+                   (sdl-atomic-set *atomic-single-click-available-flag* 1))))
+             ;(else-then
+               ;(display "mbu does not have click-init flag...doing nothing")
+               ;(newline))
+
+             ))
+          ((is-mouse-button-down-event? event)
+           (if (zero? (sdl-atomic-get *atomic-click-initiated-flag*))
+             (then
+               ;(display "initiating click")
+               ;(newline)
+               ;(set! *click-initiated-flag* #t)
+               (sdl-atomic-set *atomic-click-initiated-flag* 1)
+               (sdl-atomic-set *atomic-single-click-available-flag* 1)
+               ;(display "atomic value after flag set: ")
+               ;(display (sdl-atomic-get *atomic-single-click-available-flag*))
+               ;(newline)
+               ;(set! *single-click-available-flag* #t)
+               [$ add-glob! w
+                  (new-one-shot-timer
+                    500
+                    (lambda ()
+                      (display "disabling single click")
+                      (newline)
+                      (sdl-atomic-set *atomic-single-click-available-flag* 0)
+                      ;(display "atomic value after flag clear: ")
+                      ;(display (sdl-atomic-get *atomic-single-click-available-flag*))
+                      ;(newline)
+
+                      ))])))
+          (else
+            '()))))
 
 ;; now register a mouse single click event handler...
 ;; and we can start doing things at its location (open a menu, for instance...)
@@ -273,16 +265,23 @@
 ;; this is really a paradigm for an app and not just a game, where a game is an app.
 ;; keep your eyes peeled for a nice abstraction or two...
 
+;; need
+;;  timer-interface.ss
+;;  event-interface.ss
+;;  window-interface.ss
+
 (let mortality-loop ()
- (sdl-poll-event event)
- (pass-event-to-event-handlers event)
- (clear-renderer)
- ;; draw globs
- [$ render w]
- (sdl-render-present renderer)
+  ;; maybe we should be flushing these...
+  (while (not (zero? (sdl-poll-event event)))
+    (pass-event-to-event-handlers event))
+
+  (clear-renderer)
+  [$ tick w]
+  [$ render w]
+  (sdl-render-present renderer)
 
  (if (not (*quit*))
-     (mortality-loop)))
+   (mortality-loop)))
 
 (sdl-destroy-window window)
 ;(sdl-destroy-texture img-texture)

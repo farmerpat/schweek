@@ -196,7 +196,10 @@
               (if (bordered-label? thing)
                 [$ draw-bordered-label self thing]
                 [$ draw-label self thing]))
-             (else (error "av-interface:draw unrecognzied thing" thing)))]
+             (else
+               '() ; nothing to draw...
+               ;(error "av-interface:draw unrecognzied thing" thing)
+               ))]
       [(get-keyboard-input self) '()]
       ;; present a nice, clean mouse-input instance back instead of
       ;; gross sdl dealie...

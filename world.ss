@@ -39,9 +39,30 @@
       [(add-glob! self glob)
        (if (object? glob)
          [$ *globs* self (cons glob [$ *globs* self])])]
+      [(remove-glob! self pred)
+       [$ *globs* self (remp pred [$ *globs* self])]]
       ;; is it bad practice to have a method render
       ;; that just calls render on its component?
       [(render self) [$ draw-globs [$ av-interface self] [$ *globs* self]]]
+      [(tick self)
+       ; maybe better is:
+       ;[$ tick [$ timer-interface self] [$ *globs* self]]
+       (let ((timers (filter (lambda (g) (timer? g)) [$ *globs* self])))
+         (when (not (null? timers))
+           (let glob-rec ((timers timers))
+             (when (not (null? timers))
+               (let ((timer (car timers)))
+                 (if [$ alive timer]
+                   (begin
+                     [$ tick timer])
+                   (begin
+                     (let ((target-timer-id [$ timer-id timer]))
+                       [$ remove-glob! self
+                          (lambda (g)
+                            (and (timer? g)
+                                 (eq? [$ timer-id g] target-timer-id)))]))))
+               (glob-rec (cdr timers))))))]
+
       [(=? self other)
        (unless (world? other)
          (error 'world:=?
@@ -49,6 +70,8 @@
                 self other))
        ;; compare fields here
        (= 1 1)])))
+
+(define-predicate world?)
 
 ;; NOTE: move all this to a shapes.ss files or something.
 ;; NOTE add polygons, etc later if desired...
