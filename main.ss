@@ -172,92 +172,35 @@
 
 (sdl-atomic-set *atomic-single-click-available-flag* 1)
 
-;; these are meant to be temporary for
-;; help clarifying what's going on in
-;; the handler...
-(define-syntax then
-  (lambda (stx)
-    (syntax-case stx ()
-      ((_ sexp1 sexp2 ...)
-       (syntax
-         (begin
-           sexp1
-           sexp2
-           ...))))))
-
-(define-syntax else-then
-  (lambda (stx)
-    (syntax-case stx ()
-      ((_ sexp1 sexp2 ...)
-       (syntax
-         (begin
-           sexp1
-           sexp2
-           ...))))))
-
 (register-event-handler
   (lambda (event)
     (cond ((is-mouse-button-up-event? event)
-           ;; the thing is, we are getting more mouse up events
-           ;; after the first one (where this is 0) but the
-           ;; ones that come after are causing it to fire...
-           ;(newline)
-           ;(display "das mouse btn up...")
-           ;(display "*atomic-single-click-available-flag*: ")
-           ;(display (sdl-atomic-get *atomic-single-click-available-flag*))
-           ;(newline)
            (if (not (zero? (sdl-atomic-get *atomic-click-initiated-flag*)))
-             (then
-               ;(display "mbu has click-init flag")
-               ;(newline)
+             (begin
                (if (not (zero? (sdl-atomic-get *atomic-single-click-available-flag*)))
-                 (then
-                   (display "mbu: fire single click b/c atomic  non-zero")
+                 (begin
+                   ;; so grab its coordinates and any other
+                   ;; pertinent information and send it to
+                   ;; the world...
+                   ;; maybe we have objects register for certain
+                   ;; types of events...
+                   (display "fire single click")
                    (newline)
-                   ;(display "mbu: clearing *click-initiated-flag*")
-                   ;(newline)
+                   (sdl-atomic-set *atomic-click-initiated-flag* 0))
+                 (begin
                    (sdl-atomic-set *atomic-click-initiated-flag* 0)
-                   ;(set! *click-initiated-flag* #f)
-                   )
-                 (else-then
-                   ;(display "mbu: not firing b/c atom zero")
-                   ;(newline)
-                   ;(display "mbu: setting atomic non-zero")
-                   ;(newline)
-                   ;; maybe here we also clear *atomic-click-initiated-flag*
-                   (sdl-atomic-set *atomic-click-initiated-flag* 0)
-                   (sdl-atomic-set *atomic-single-click-available-flag* 1))))
-             ;(else-then
-               ;(display "mbu does not have click-init flag...doing nothing")
-               ;(newline))
-
-             ))
+                   (sdl-atomic-set *atomic-single-click-available-flag* 1))))))
           ((is-mouse-button-down-event? event)
            (if (zero? (sdl-atomic-get *atomic-click-initiated-flag*))
-             (then
-               ;(display "initiating click")
-               ;(newline)
-               ;(set! *click-initiated-flag* #t)
+             (begin
                (sdl-atomic-set *atomic-click-initiated-flag* 1)
                (sdl-atomic-set *atomic-single-click-available-flag* 1)
-               ;(display "atomic value after flag set: ")
-               ;(display (sdl-atomic-get *atomic-single-click-available-flag*))
-               ;(newline)
-               ;(set! *single-click-available-flag* #t)
                [$ add-glob! w
                   (new-one-shot-timer
                     500
                     (lambda ()
-                      (display "disabling single click")
-                      (newline)
-                      (sdl-atomic-set *atomic-single-click-available-flag* 0)
-                      ;(display "atomic value after flag clear: ")
-                      ;(display (sdl-atomic-get *atomic-single-click-available-flag*))
-                      ;(newline)
-
-                      ))])))
-          (else
-            '()))))
+                      (sdl-atomic-set *atomic-single-click-available-flag* 0)))])))
+          (else #f))))
 
 ;; now register a mouse single click event handler...
 ;; and we can start doing things at its location (open a menu, for instance...)
