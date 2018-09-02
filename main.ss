@@ -174,33 +174,32 @@
 
 (register-event-handler
   (lambda (event)
-    (cond ((is-mouse-button-up-event? event)
-           (if (not (zero? (sdl-atomic-get *atomic-click-initiated-flag*)))
-             (begin
-               (if (not (zero? (sdl-atomic-get *atomic-single-click-available-flag*)))
-                 (begin
-                   ;; so grab its coordinates and any other
-                   ;; pertinent information and send it to
-                   ;; the world...
-                   ;; maybe we have objects register for certain
-                   ;; types of events...
-                   (display "fire single click")
-                   (newline)
-                   (sdl-atomic-set *atomic-click-initiated-flag* 0))
-                 (begin
-                   (sdl-atomic-set *atomic-click-initiated-flag* 0)
-                   (sdl-atomic-set *atomic-single-click-available-flag* 1))))))
-          ((is-mouse-button-down-event? event)
-           (if (zero? (sdl-atomic-get *atomic-click-initiated-flag*))
-             (begin
-               (sdl-atomic-set *atomic-click-initiated-flag* 1)
-               (sdl-atomic-set *atomic-single-click-available-flag* 1)
-               [$ add-glob! w
-                  (new-one-shot-timer
-                    500
-                    (lambda ()
-                      (sdl-atomic-set *atomic-single-click-available-flag* 0)))])))
-          (else #f))))
+    (if (is-mouse-button-up-event? event)
+      (if (not (zero? (sdl-atomic-get *atomic-click-initiated-flag*)))
+        (begin
+          (if (not (zero? (sdl-atomic-get *atomic-single-click-available-flag*)))
+            (begin
+              ;; so grab its coordinates and any other
+              ;; pertinent information and send it to
+              ;; the world...
+              ;; maybe we have objects register for certain
+              ;; types of events...
+              (display "fire single click")
+              (newline)
+              (sdl-atomic-set *atomic-click-initiated-flag* 0))
+            (begin
+              (sdl-atomic-set *atomic-click-initiated-flag* 0)
+              (sdl-atomic-set *atomic-single-click-available-flag* 1)))))
+      (if (is-mouse-button-down-event? event)
+        (if (zero? (sdl-atomic-get *atomic-click-initiated-flag*))
+          (begin
+            (sdl-atomic-set *atomic-click-initiated-flag* 1)
+            (sdl-atomic-set *atomic-single-click-available-flag* 1)
+            [$ add-glob! w
+               (new-one-shot-timer
+                 500
+                 (lambda ()
+                   (sdl-atomic-set *atomic-single-click-available-flag* 0)))]))))))
 
 ;; now register a mouse single click event handler...
 ;; and we can start doing things at its location (open a menu, for instance...)
