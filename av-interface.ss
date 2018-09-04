@@ -196,10 +196,17 @@
               (if (bordered-label? thing)
                 [$ draw-bordered-label self thing]
                 [$ draw-label self thing]))
+             ((widget? thing)
+              [$ draw-colored-rectangle self [$ border thing]]
+              ;; this is where we check the other things
+              ;; that the widget could contain, and then
+              ;; draw them...
+
+              ;; then map draw over the children...
+              )
              (else
-               '() ; nothing to draw...
-               ;(error "av-interface:draw unrecognzied thing" thing)
-               ))]
+               ; nothing to draw...
+               '()))]
       [(get-keyboard-input self) '()]
       ;; present a nice, clean mouse-input instance back instead of
       ;; gross sdl dealie...

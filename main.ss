@@ -4,21 +4,13 @@
 ;;   image objects that allow IM
 ;;   transformations/conversion to be performed on them
 
-;; in addition to av-interface, maybe we also have
-;; an event-interface. It would be really nice
-;; to be able to add event listeners like
-;; 'mouse-single-click and 'mouse-double-click
-;; instead of the client of the event registrar
-;; having to deal with mouse down events firing on
-;; a million frames. of course, we will also add
-;; events for 'mouse-down, etc for more fine-grained
-;; control.
 (load "tiny-talk.sls")
 (load "world.ss")
 (load "color.ss")
 (load "av-interface.ss")
 (load "timer-interface.ss")
 (load "event-interface.ss")
+(load "widget.ss")
 
 (import (chezscheme)
         (sdl2)
@@ -48,11 +40,6 @@
 (define (register-event-handler eh)
   (*event-handlers* (cons eh (*event-handlers*))))
 
-;; i am repeating myself with
-;; these parameters whose values
-;; are lists of procedures
-;; that we want to call w/ or w/o
-;; arguments. abstract away...
 (define *draw-procedures* (make-parameter '()))
 
 (define (register-draw-procedure dp)
@@ -90,7 +77,16 @@
 
 (define retval  (sdl-init (sdl-initialization 'video 'events 'timer 'audio)))
 
-(define window (sdl-create-window "test" 50 50 800 600 (sdl-window-flags 'shown)))
+(define *window-width* (make-parameter 800))
+(define *window-height* (make-parameter 600))
+
+(define window
+  (sdl-create-window
+    "schweek"
+    500 500
+    (*window-width*)
+    (*window-height*)
+    (sdl-window-flags 'shown)))
 
 (define renderer (sdl-create-renderer window -1 (sdl-renderer-flags 'accelerated)))
 
@@ -99,42 +95,43 @@
 (define color-white [$ get-color *c64-palette* 'white])
 
 ;; make some points and add them to the world
-(do ((i 0  (+ i 1)))
-  ((> i 400) ' ())
-  [$ add-glob! w (new-colored-point i i color-black)])
+;(do ((i 0  (+ i 1)))
+  ;((> i 400) ' ())
+  ;[$ add-glob! w (new-colored-point i i color-black)])
 
-[$ add-glob! w (new-colored-line (new-point 0 200) (new-point 400 200) color-black)]
+;[$ add-glob! w (new-colored-line (new-point 0 200) (new-point 400 200) color-black)]
 
-[$ add-glob! w (new-colored-rectangle (new-point 300 400) 50 50 color-black)]
+;[$ add-glob! w (new-colored-rectangle (new-point 300 400) 50 50 color-black)]
 
-(do ((i 0 (+ i 50)))
-  ((> i 400) '())
-  [$ add-glob! w (new-colored-circle (new-point (+ i 200) 200) 25 color-white)])
+;(do ((i 0 (+ i 50)))
+  ;((> i 400) '())
+  ;[$ add-glob! w (new-colored-circle (new-point (+ i 200) 200) 25 color-white)])
 
-[$ add-glob! w (new-colored-cross (new-point 500 100) 10 10 color-black)]
+;[$ add-glob! w (new-colored-cross (new-point 500 100) 10 10 color-black)]
 
-;; should see if it's possible to calculate
-;; what the dimensions of the label should be
-;; based on how much space the message in
-;; font/point will take up.
+;[$ add-glob!
+   ;w
+   ;(new-label
+     ;"message!"
+     ;(new-colored-font "DejaVuSerif.ttf" 'deja-vu-serif 56 color-black)
+     ;(new-point 500 400))]
 
-[$ add-glob!
-   w
-   (new-label
-     "message!"
-     (new-colored-font "DejaVuSerif.ttf" 'deja-vu-serif 56 color-black)
-     (new-point 500 400))]
+(define my-border-label
+  (new-bordered-label
+     "menu item one"
+     (new-colored-font "DejaVuSans.ttf" 'deja-vu-sans 16 color-black)
+     (new-point (/ (*window-width*) 2) (/ (*window-height*) 2))
+     (new-border [$ get-color *c64-palette* 'light-red] 5)))
 
-[$ add-glob!
-   w
-   (new-bordered-label
-     "it was the best of times, it was the worst of times..."
-     (new-colored-font "DejaVuSans.ttf" 'deja-vu-sans 26 color-black)
-     (new-point 100 500)
-     (new-border [$ get-color *c64-palette* 'light-red] 15))]
+;[$ add-glob! w my-border-label]
+
+;[$ add-glob! w
+   ;(new-one-shot-timer 3000 (lambda () (display "fyf alot") (newline)))]
 
 [$ add-glob! w
-   (new-one-shot-timer 3000 (lambda () (display "fyf alot") (newline)))]
+   (new-widget
+     (new-rectangle (new-point 200 200) 35 85)
+     [$ get-color *c64-palette* 'light-red])]
 
 [$ add-glob! w
    (new-event-handler
@@ -143,6 +140,13 @@
          (begin
            (display "das mouse ")
            (display "at: ")
+           ;; spawn a "menu-item"
+           [$ add-glob! w
+              (new-bordered-label
+                "menu item n"
+                (new-colored-font "DejaVuSans.ttf" 'deja-vu-sans 16 color-black)
+                [$ coords e]
+                (new-border [$ get-color *c64-palette* 'light-red] 5))]
            (display [$ ->string [$ coords e]])
            (newline)))))]
 
@@ -208,12 +212,6 @@
                  500
                  (lambda ()
                    (sdl-atomic-set *atomic-single-click-available-flag* 0)))]))))))
-
-;; now register a mouse single click event handler...
-;; and we can start doing things at its location (open a menu, for instance...)
-;; this basically is the chez branch of schengine.
-;; this is really a paradigm for an app and not just a game, where a game is an app.
-;; keep your eyes peeled for a nice abstraction or two...
 
 ;; need
 ;;  window-interface.ss
