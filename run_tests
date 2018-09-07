@@ -1,0 +1,9 @@
+#! /usr/bin/scheme --script
+
+(import (srfi s64 testing))
+
+(display "i r test runnin")
+(newline)
+
+; to start, just load each one of the files
+; in "test/", which should just run.
