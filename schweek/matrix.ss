@@ -1,7 +1,11 @@
-(load "tiny-talk.sls")
+(library (schweek matrix)
+  (export
+    new-matrix
+    matrix?)
 
-(import (chezscheme)
-        (tiny-talk))
+  (import
+    (chezscheme)
+    (tiny-talk))
 
 (define new-matrix
   (case-lambda
@@ -31,5 +35,4 @@
           (vector-set! (vector-ref internal-rep row) col val)]))]
     )
   )
-
-(define-predicate matrix?)
+(define-predicate matrix?))

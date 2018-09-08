@@ -1,10 +1,9 @@
-;; do tests
-;; need s64
-
-(load "tiny-talk.sls")
-(load "src/matrix.ss")
+;(load "schweek-loader.ss")
+;(load "tiny-talk.sls")
+;(load "schweek/matrix.ss")
 
 (import (chezscheme)
+        (schweek matrix)
         (tiny-talk)
         (srfi s64 testing))
 
