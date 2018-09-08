@@ -2,8 +2,7 @@
 
 (import (srfi s64 testing))
 
-(display "i r test runnin")
-(newline)
+(load "test/matrix.ss")
 
 ; to start, just load each one of the files
 ; in "test/", which should just run.

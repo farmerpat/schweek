@@ -6,9 +6,7 @@
 (define new-matrix
   (case-lambda
     [(nrows ncols)
-     (new-matrix nrows ncols (lambda (x) #t))]
-    [(nrows ncols guard)
-     (new-matrix nrows ncols guard 0)]
+     (new-matrix nrows ncols (lambda (x) #t) 0)]
     [(nrows ncols guard filler)
      (when (not (and (number? nrows) (number? ncols)))
        (error "new-matrix" "invalid nrows/ncols" nrows ncols))
