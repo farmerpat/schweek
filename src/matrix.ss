@@ -19,13 +19,16 @@
              internal-rep
              i
              (make-vector ncols filler)))
-       (object ([rows nrows] [cols ncols])
+       (object ([rows nrows] [cols ncols] [guard guard])
          [(matrix? self) #t]
          [(mat-ref self row col)
           (vector-ref (vector-ref internal-rep row) col)]
+         [(passes-guard self val)
+          ([$ guard self] val)]
          [(mat-set! self row col val)
-          (vector-set! (vector-ref internal-rep row) col val)])
-       )]
+          (when (not [$ passes-guard self val])
+            (error "matrix:mat-set!" "value did not pass guard" val))
+          (vector-set! (vector-ref internal-rep row) col val)]))]
     )
   )
 

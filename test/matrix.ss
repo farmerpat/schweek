@@ -35,6 +35,11 @@
 [$ mat-set! test-mat 1 1 'plums]
 (test-eq "matrix-mat-set!-and-access-2x2-1,1" 'plums [$ mat-ref test-mat 1 1])
 
-;(test-error "matrix-guard-throws-error-on-invalid-insertion-2x2" [$ mat-set! test-mat 0 0 3])
+(test-error "matrix-guard-throws-error-on-invalid-insertion-2x2" [$ mat-set! test-mat 0 0 3])
+
+(test-assert "matrix-passes-guard-succeeds-on-valid-value-2x2" [$ passes-guard test-mat 'some-symbol])
+(test-assert
+  "matrix-passes-guard-fails-on-invalid-value-2x2"
+  (not [$ passes-guard test-mat 3]))
 
 (test-end "matrix-test")
