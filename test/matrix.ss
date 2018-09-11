@@ -1,7 +1,3 @@
-;(load "schweek-loader.ss")
-;(load "tiny-talk.sls")
-;(load "schweek/matrix.ss")
-
 (import (chezscheme)
         (schweek matrix)
         (tiny-talk)

@@ -32,7 +32,6 @@
          [(mat-set! self row col val)
           (when (not [$ passes-guard self val])
             (error "matrix:mat-set!" "value did not pass guard" val))
-          (vector-set! (vector-ref internal-rep row) col val)]))]
-    )
-  )
+          (vector-set! (vector-ref internal-rep row) col val)]))]))
+
 (define-predicate matrix?))

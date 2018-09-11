@@ -11,8 +11,19 @@
           ;(sdl2) ; will need when converting to sdl color.
           (tiny-talk))
 
+  (define (valid-rgb-val? rgba)
+    (and (number? rgba)
+         (integer? rgba)
+         (>= rgba 0)
+         (<= rgba 255)))
+
   (define new-color
     (lambda (r g b a)
+      (when (or (not (valid-rgb-val? r))
+                (not (valid-rgb-val? g))
+                (not (valid-rgb-val? b))
+                (not (valid-rgb-val? a)))
+        (error "new-color" "invalid rgba value" r g b a))
       (object ([name #f] [r r] [g g] [b b] [a a])
         [(color? self) #t]
         [(rgba self)
