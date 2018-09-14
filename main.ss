@@ -5,8 +5,8 @@
 ;;   transformations/conversion to be performed on them
 
 (load "tiny-talk.sls")
+(load "schweek/color.ss")
 (load "world.ss")
-(load "color.ss")
 (load "av-interface.ss")
 (load "timer-interface.ss")
 (load "event-interface.ss")
@@ -15,7 +15,8 @@
 (import (chezscheme)
         (sdl2)
         (sdl2 ttf)
-        (tiny-talk))
+        (tiny-talk)
+        (schweek color))
 
 (load "sdl-helpers.ss")
 

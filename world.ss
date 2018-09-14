@@ -27,6 +27,7 @@
 
 (import (chezscheme)
         (sdl2)
+        (schweek color)
         (tiny-talk))
 
 (define (new-world renderer)
